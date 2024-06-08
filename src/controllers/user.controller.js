@@ -320,18 +320,19 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
    // Save the old avatar URL for later deletion
    const oldAvatarUrl = user.avatar;
-   // Update the user's avatar URL with the new one from Cloudinary
-   user.avatar = avatar.url;
-   await user.save();
+
+   // Update the user's avatar URL in the database
+   const updatedUser = await User.findByIdAndUpdate(
+      req.user?._id,
+      { $set: { avatar: avatar.url } },
+      { new: true }
+   ).select("-password");
 
    // Delete the old avatar from Cloudinary if it exists
    if (oldAvatarUrl) {
       const oldAvatarPublicId = oldAvatarUrl.split("/").pop().split(".")[0]; // Extract public ID from old avatar URL
       await deleteFromCloudinary(oldAvatarPublicId);
    }
-
-   // Fetch the updated user data without the password field
-   const updatedUser = await User.findById(req.user?._id).select("-password");
 
    // Respond with a success message and the updated user data
    return res
@@ -362,9 +363,13 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
    // Save the old cover image URL for later deletion
    const oldCoverImageUrl = user.coverImage;
-   // Update the user's cover image URL with the new one from Cloudinary
-   user.coverImage = coverImage.url;
-   await user.save();
+
+   // Update the user's cover image URL in the database
+   const updatedUser = await User.findByIdAndUpdate(
+      req.user?._id,
+      { $set: { coverImage: coverImage.url } },
+      { new: true }
+   ).select("-password");
 
    // Delete the old cover image from Cloudinary if it exists
    if (oldCoverImageUrl) {
@@ -374,9 +379,6 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
          .split(".")[0]; // Extract public ID from old cover image URL
       await deleteFromCloudinary(oldCoverImagePublicId);
    }
-
-   // Fetch the updated user data without the password field
-   const updatedUser = await User.findById(req.user?._id).select("-password");
 
    // Respond with a success message and the updated user data
    return res
