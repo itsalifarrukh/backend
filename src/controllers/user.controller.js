@@ -469,7 +469,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
    }
 
    // Logging the channel data for debugging purposes
-   console.log(channel);
+   // console.log(channel);
 
    // Returning the fetched channel data as a JSON response
    return res
