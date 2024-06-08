@@ -115,7 +115,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
    // request body => data
    const { username, email, password } = req.body;
-   console.log(email);
+   // console.log(email);
    // username or email
    //  Here is the logic if you want to find user with its username or email:
    if (!username && !email) {
@@ -172,8 +172,8 @@ const logoutUser = asyncHandler(async (req, res) => {
    User.findByIdAndUpdate(
       req.user._id,
       {
-         $set: {
-            refreshToken: undefined,
+         $unset: {
+            refreshToken: 1, // this removes the field from document
          },
       },
       {
