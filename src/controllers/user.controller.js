@@ -4,6 +4,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshTokens = async (userId) => {
    try {
@@ -477,6 +478,68 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       );
 });
 
+// Importing required modules or dependencies
+const getWatchHistory = asyncHandler(async (req, res) => {
+   // Aggregating user data including watch history
+   const user = await User.aggregate([
+      {
+         // Matching documents based on the user's _id
+         $match: {
+            _id: new mongoose.Types.ObjectId.createFromHexString(req.user._id),
+         },
+      },
+      {
+         // Performing a lookup to fetch videos from the watch history
+         $lookup: {
+            from: "videos",
+            localField: "watchHistory",
+            foreignField: "_id",
+            as: "watchHistory",
+            pipeline: [
+               {
+                  // Performing a lookup to fetch owner details of each video
+                  $lookup: {
+                     from: "users",
+                     localField: "owner",
+                     foreignField: "_id",
+                     as: "owner",
+                     pipeline: [
+                        {
+                           // Projecting only required fields of the owner
+                           $project: {
+                              fullName: 1,
+                              username: 1,
+                              avatar: 1,
+                           },
+                        },
+                     ],
+                  },
+               },
+               {
+                  // Adding a new field 'owner' which contains the details of the video owner
+                  $addFields: {
+                     owner: {
+                        $first: "$owner",
+                     },
+                  },
+               },
+            ],
+         },
+      },
+   ]);
+
+   // Returning the watch history data as a JSON response
+   return res
+      .status(200)
+      .json(
+         new ApiResponse(
+            200,
+            user[0].watchHistory,
+            "Watch History Fetched Successfully!"
+         )
+      );
+});
+
 export {
    registreUser,
    loginUser,
@@ -488,4 +551,5 @@ export {
    updateUserAvatar,
    updateUserCoverImage,
    getUserChannelProfile,
+   getWatchHistory,
 };
