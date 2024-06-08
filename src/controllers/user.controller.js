@@ -388,6 +388,95 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
       );
 });
 
+// Importing required modules or dependencies
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+   // Destructuring username from request parameters
+   const { username } = req.params;
+
+   // Checking if username is missing or empty
+   if (!username?.trim()) {
+      // Throwing an error if username is missing
+      throw new ApiError(400, "Username is Missing");
+   }
+
+   // Aggregating user data from User collection
+   const channel = await User.aggregate([
+      {
+         // Matching documents based on provided username (case-insensitive)
+         $match: {
+            username: username?.toLowerCase(),
+         },
+      },
+      {
+         // Performing a lookup to fetch subscribers of the user
+         $lookup: {
+            from: "subscriptions",
+            localField: "_id",
+            foreignField: "channel",
+            as: "subscribers",
+         },
+      },
+      {
+         // Performing a lookup to fetch channels subscribed to by the user
+         $lookup: {
+            from: "subscriptions",
+            localField: "_id",
+            foreignField: "subscriber",
+            as: "subscribedTo",
+         },
+      },
+      {
+         // Adding new fields to the documents
+         $addFields: {
+            // Counting the number of subscribers
+            subscribersCount: {
+               $size: "$subscribers",
+            },
+            // Counting the number of channels subscribed to by the user
+            channelSubcribedToCount: {
+               $size: "$subscribedTo",
+            },
+            // Checking if the current user is subscribed to this channel
+            isSubscribed: {
+               $cond: {
+                  // Using conditional operator to check if the user ID is in the subscribers list
+                  if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+                  then: true,
+                  else: false,
+               },
+            },
+         },
+      },
+      {
+         // Projecting only required fields
+         $project: {
+            fullName: 1,
+            username: 1,
+            subscribersCount: 1,
+            channelSubcribedToCount: 1,
+            avatar: 1,
+            coverImage: 1,
+            email: 1,
+         },
+      },
+   ]);
+
+   // If no channel is found with the provided username, throwing a 404 error
+   if (!channel?.length) {
+      throw new ApiError(404, "Channel does not Exist");
+   }
+
+   // Logging the channel data for debugging purposes
+   console.log(channel);
+
+   // Returning the fetched channel data as a JSON response
+   return res
+      .status(200)
+      .json(
+         new ApiResponse(200, channel[0], "User Channel Fetched Successfully!")
+      );
+});
+
 export {
    registreUser,
    loginUser,
@@ -398,4 +487,5 @@ export {
    updateAccountDetails,
    updateUserAvatar,
    updateUserCoverImage,
+   getUserChannelProfile,
 };
